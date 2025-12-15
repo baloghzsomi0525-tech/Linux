@@ -1,27 +1,11 @@
-#!/usr/bin/env bash
+#!/bin/bash
+# Show-Off Server Installer - robust edition (VirtualBox/Debian/Ubuntu)
+# Installs: Apache2, SSH, Mosquitto(+clients), Node-RED, MariaDB, PHP, UFW
+# Uses config.conf toggles, logs, and does NOT abort on single-component failures.
+ 
 set -u
-export DEBIAN_FRONTEND=noninteractive
- 
-############################################
-# KÖTELEZŐ: bash + root + stabil PATH
-############################################
-if [[ -z "${BASH_VERSION:-}" ]]; then
-  echo "Ezt bash-al kell futtatni: bash ./install.sh"
-  exit 1
-fi
- 
-if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
-  echo "Root jogosultság szükséges."
-  echo "Futtasd így:"
-  echo "  su -"
-  echo "  cd /ahol/a/script/van"
-  echo "  chmod +x install.sh"
-  echo "  ./install.sh"
-  exit 1
-fi
- 
-# VirtualBox/minimal rendszereken gyakori PATH-hiba javítása
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export DEBIAN_FRONTEND=noninteractive
  
 ############################################
 # KONFIG
@@ -51,8 +35,18 @@ RED="\e[31m"
 GREEN="\e[32m"
 YELLOW="\e[33m"
 BLUE="\e[34m"
-PURPLE="\e[35m"
 NC="\e[0m"
+ 
+############################################
+# ROOT CHECK
+############################################
+if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
+  echo -e "${RED}Root jogosultság szükséges.${NC}"
+  echo "Futtasd így:"
+  echo "  su -"
+  echo "  ./install.sh"
+  exit 1
+fi
  
 ############################################
 # LOG
@@ -60,8 +54,11 @@ NC="\e[0m"
 mkdir -p "$(dirname "$LOGFILE")" 2>/dev/null || true
 touch "$LOGFILE" 2>/dev/null || true
  
-log() { echo "$(date '+%F %T') | $1" | tee -a "$LOGFILE" >/dev/null; }
-ok() { echo -e "${GREEN}✔ $1${NC}"; log "OK: $1"; }
+log() {
+  echo "$(date '+%F %T') | $1" | tee -a "$LOGFILE" >/dev/null
+}
+ 
+ok()   { echo -e "${GREEN}✔ $1${NC}"; log "OK: $1"; }
 warn() { echo -e "${YELLOW}⚠ $1${NC}"; log "WARN: $1"; }
 fail() { echo -e "${RED}✖ $1${NC}"; log "FAIL: $1"; }
  
@@ -81,14 +78,14 @@ cat << "EOF"
 =========================================
   SHOW-OFF SERVER INSTALLER vFINAL
   Apache | Node-RED | MQTT | MariaDB | PHP | UFW
-  VirtualBox / Debian / Ubuntu - STABIL
+  VirtualBox / Debian / Ubuntu - ROBUSZTUS
 =========================================
 EOF
 echo -e "${BLUE}Logfile:${NC} $LOGFILE"
 echo
  
 ############################################
-# EREDMÉNYEK
+# EREDMÉNY TÁBLÁZAT
 ############################################
 declare -A RESULTS
 set_result() { RESULTS["$1"]="$2"; }
@@ -107,9 +104,10 @@ apt_install() {
 }
  
 ############################################
-# SAFE STEP (ne szakadjon meg félúton)
+# SAFE EXEC: ne álljon meg, hanem rögzítse a hibát
 ############################################
 safe_step() {
+  # safe_step "Label" command...
   local label="$1"; shift
   log "START: $label -> $*"
   if "$@"; then
@@ -122,7 +120,7 @@ safe_step() {
 }
  
 ############################################
-# INSTALL FUNCS
+# TELEPÍTŐK
 ############################################
 install_apache() {
   apt_install apache2 || return 1
@@ -165,7 +163,7 @@ install_ufw() {
 }
  
 install_node_red() {
-  # Node-RED installer néha nem 0-val lép ki -> service állapot a döntő
+  # Node-RED installer néha nem exit 0-val tér vissza -> nem az exit code a döntő.
   apt_install curl ca-certificates || return 1
  
   log "Node-RED telepítés (non-interactive --confirm-root)"
@@ -176,17 +174,18 @@ install_node_red() {
   set -e
   log "Node-RED installer exit code: $rc"
  
+  # próbáljuk indítani, ha létrejött
   run systemctl daemon-reload || true
   if systemctl list-unit-files | grep -q '^nodered\.service'; then
     run systemctl enable --now nodered.service || true
   fi
  
+  # tényleges sikerfeltétel: fut a service (vagy legalább települt a parancs)
   if systemctl is-active --quiet nodered 2>/dev/null; then
     return 0
   fi
- 
-  # ha települt a parancs, de nem fut a service, az nálunk hiba
   if command -v node-red >/dev/null 2>&1; then
+    # Települt, de service nem fut -> ezt hibának vesszük
     return 1
   fi
   return 1
@@ -195,12 +194,15 @@ install_node_red() {
 ############################################
 # FUTTATÁS
 ############################################
+# apt update mindig menjen (különben minden más bukhat)
 if apt_update; then
   ok "APT update kész"
 else
-  warn "APT update sikertelen (internet/DNS/repo gond)."
+  fail "APT update sikertelen (internet/DNS/repo gond)."
+  # Itt még megpróbálhatjuk folytatni, de valószínűleg minden telepítés bukni fog.
 fi
  
+# Lépések (config szerint)
 run_install() {
   local var="$1"
   local label="$2"
@@ -242,15 +244,13 @@ done
  
 log "PORT CHECK (80,1880,1883)"
 if command -v ss >/dev/null 2>&1; then
-  ss -tulpn | grep -E '(:80|:1880|:1883)\b' >/dev/null \
-&& ok "Portok rendben" \
-    || warn "Nem látok hallgatózó portot (lehet szolgáltatás nem fut)."
+  ss -tulpn | grep -E '(:80|:1880|:1883)\b' && ok "Portok rendben" || warn "Nem látok hallgatózó portot (lehet szolgáltatás nem fut)."
 else
   warn "ss parancs nem elérhető"
 fi
  
 ############################################
-# ÖSSZEFOGLALÓ + HAJRÁ LILÁK
+# ÖSSZEFOGLALÓ
 ############################################
 echo
 echo "================================="
@@ -261,6 +261,7 @@ for k in "${!RESULTS[@]}"; do
 done
 echo
  
+# Exit code: 0 ha minden SIKERES/KIHAGYVA, 1 ha volt HIBA
 any_fail=0
 for k in "${!RESULTS[@]}"; do
   if [[ "${RESULTS[$k]}" == "HIBA" ]]; then
@@ -271,18 +272,6 @@ done
 if [[ "$any_fail" -eq 0 ]]; then
   echo -e "${GREEN}KÉSZ – minden lépés rendben lefutott.${NC}"
   log "Telepítés befejezve: SIKERES"
- 
-  echo
-  echo -e "${PURPLE}"
-  cat << "EOF"
-██╗  ██╗ █████╗      ██╗██████╗  █████╗     ██╗     ██╗██╗      █████╗ ██╗  ██╗
-██║  ██║██╔══██╗     ██║██╔══██╗██╔══██╗    ██║     ██║██║     ██╔══██╗██║ ██╔╝
-███████║███████║     ██║██████╔╝███████║    ██║     ██║██║     ███████║█████╔╝ 
-██╔══██║██╔══██║██   ██║██╔══██╗██╔══██║    ██║     ██║██║     ██╔══██║██╔═██╗ 
-██║  ██║██║  ██║╚█████╔╝██║  ██║██║  ██║    ███████╗██║███████╗██║  ██║██║  ██╗
-╚═╝  ╚═╝╚═╝  ╚═╝ ╚════╝ ╚═╝  ╚═╝╚═╝  ╚═╝    ╚══════╝╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝
-EOF
-  echo -e "${NC}"
   exit 0
 else
   echo -e "${YELLOW}KÉSZ – volt sikertelen lépés. Nézd a logot: $LOGFILE${NC}"
