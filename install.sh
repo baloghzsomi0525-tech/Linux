@@ -147,22 +147,43 @@ install_node_red() {
 }
 
 ############################################
+# TELEPÍTÉS YT-DLP ÉS MPV
+############################################
+install_yt_deps() {
+  # mpv telepítése
+  if ! command -v mpv >/dev/null 2>&1; then
+    log "MPV nincs telepítve, telepítés..."
+    apt_install mpv
+  fi
+
+  # python3-pip telepítése
+  if ! command -v python3 >/dev/null 2>&1 || ! command -v pip3 >/dev/null 2>&1; then
+    log "Python3-pip telepítése..."
+    apt_install python3 python3-pip
+  fi
+
+  # yt-dlp telepítése pip3-ból
+  if ! command -v yt-dlp >/dev/null 2>&1; then
+    log "yt-dlp telepítése pip3-ból..."
+    pip3 install yt-dlp
+  fi
+}
+
+############################################
 # BATMAN VILLOGÁS + YOUTUBE ZENE
 ############################################
 celebrate() {
   local colors=("$RED" "$GREEN" "$YELLOW" "$BLUE" "$MAGENTA" "$CYAN")
   local YT_URL="https://www.youtube.com/watch?v=iAzagp0PXSk"
 
-  # Ellenőrzés: yt-dlp és mpv telepítve
-  if ! command -v yt-dlp >/dev/null 2>&1 || ! command -v mpv >/dev/null 2>&1; then
-    warn "YT lejátszáshoz telepítsd a yt-dlp és mpv csomagot!"
-    return
-  fi
-
   # Hang lejátszása háttérben folyamatosan
-  (while true; do
-     yt-dlp -o - "$YT_URL" | mpv - >/dev/null 2>&1
-   done) &
+  if command -v yt-dlp >/dev/null 2>&1 && command -v mpv >/dev/null 2>&1; then
+    (while true; do
+       yt-dlp -o - "$YT_URL" | mpv - >/dev/null 2>&1
+     done) &
+  else
+    warn "YT lejátszáshoz telepítsd a yt-dlp és mpv csomagot!"
+  fi
 
   # Villogó Batman ASCII
   while true; do
@@ -198,6 +219,7 @@ run_install() {
   echo
 }
 
+# Telepítés
 run_install INSTALL_APACHE     "Apache2"   install_apache
 run_install INSTALL_SSH        "SSH"       install_ssh
 run_install INSTALL_MOSQUITTO  "Mosquitto" install_mosquitto
@@ -205,6 +227,9 @@ run_install INSTALL_NODE_RED   "Node-RED"  install_node_red
 run_install INSTALL_MARIADB    "MariaDB"   install_mariadb
 run_install INSTALL_PHP        "PHP"       install_php
 run_install INSTALL_UFW        "UFW"       install_ufw
+
+# Telepítés YT deps
+install_yt_deps
 
 ############################################
 # VÉGE 🎬
