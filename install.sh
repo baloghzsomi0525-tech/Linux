@@ -165,40 +165,45 @@ install_ufw() {
 install_node_red() {
   apt_install curl ca-certificates build-essential || return 1
 
-  log "Node-RED telepítés (hivatalos installer)"
+  log "Node-RED hivatalos installer futtatása"
 
   set +e
   curl -fsSL https://github.com/node-red/linux-installers/releases/latest/download/update-nodejs-and-nodered-deb \
-    | bash -s -- --confirm-root --confirm-install
-  local rc=$?
+    | bash -s -- --confirm-root --confirm-install --skip-pi
+  rc=$?
   set -e
 
-  log "Node-RED installer exit code: $rc (nem döntő)"
+  log "Node-RED installer exit code: $rc (nem kritikus)"
 
-  # systemd frissítés
+  # nodered user biztosítása
+  if ! id nodered >/dev/null 2>&1; then
+    log "nodered user létrehozása"
+    useradd -m -s /bin/bash nodered
+  fi
+
+  # systemd reload
+  run systemctl daemon-reexec || true
   run systemctl daemon-reload || true
 
-  # lehetséges service nevek
-  for svc in nodered node-red; do
-    if systemctl list-unit-files | grep -q "^$svc\.service"; then
-      log "Node-RED systemd service találva: $svc"
-      run systemctl enable --now "$svc.service" || true
-      sleep 2
-      if systemctl is-active --quiet "$svc.service"; then
-        return 0
-      fi
-    fi
-  done
-
-  # fallback: CLI létezik?
-  if command -v node-red >/dev/null 2>&1; then
-    warn "Node-RED parancs települt, de systemd service nem fut"
+  # PRÓBÁLKOZÁSOK SORRENDJE (EZ A LÉNYEG)
+  if systemctl list-unit-files | grep -q '^nodered.service'; then
+    run systemctl enable --now nodered.service || return 1
     return 0
   fi
 
-  fail "Node-RED sem service-ként, sem parancsként nem található"
-  return 1
-}
+  if systemctl list-unit-files | grep -q '^node-red.service'; then
+    run systemctl enable --now node-red.service || return 1
+    return 0
+  fi
+
+  if systemctl list-unit-files | grep -q '^node-red@\.service'; then
+    run systemctl enable --now node-red@nodered.service || return 1
+    return 0
+  fi
+
+  # Fallback – manuális indítás
+  if command -v node-red >/dev/null 2>&1; then
+    warn "Node-RED CLI létezik, systemd service
 
  
 ############################################
