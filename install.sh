@@ -197,7 +197,7 @@ celebrate() {
     echo -e "   ${color}██████╔╝██║  ██║   ██║   ██║ ╚═╝ ██║██║  ██║██║ ╚████║${NC}"
     echo -e "   ${color}╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝${NC}"
     echo
-    echo -e "        ${color}MEGVAN A 3-MAS? XD${NC}"
+    echo -e "        ${color}MEGVAN A 4-ES? XD${NC}"
     sleep 0.4
   done
 }
