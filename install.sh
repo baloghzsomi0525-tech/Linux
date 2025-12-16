@@ -1,5 +1,5 @@
 #!/bin/bash
-# Show-Off Server Installer - FINAL + NODE-RED FIX + FUN ANIMATION
+# Show-Off Server Installer - FINAL + NODE-RED + BATMAN ANIM + YT MUSIC
 # Apache | SSH | Mosquitto | Node-RED | MariaDB | PHP | UFW
 # Debian / Ubuntu / VirtualBox
 
@@ -58,10 +58,7 @@ warn() { echo -e "${YELLOW}⚠ $1${NC}"; log "WARN: $1"; }
 fail() { echo -e "${RED}✖ $1${NC}"; log "FAIL: $1"; }
 
 run() {
-  if [[ "$DRY_RUN" == "true" ]]; then
-    warn "[DRY-RUN] $*"
-    return 0
-  fi
+  [[ "$DRY_RUN" == "true" ]] && { warn "[DRY-RUN] $*"; return 0; }
   "$@"
 }
 
@@ -87,13 +84,8 @@ set_result() { RESULTS["$1"]="$2"; }
 ############################################
 # APT
 ############################################
-apt_update() {
-  run apt-get update -y
-}
-
-apt_install() {
-  run apt-get install -y "$@"
-}
+apt_update() { run apt-get update -y; }
+apt_install() { run apt-get install -y "$@"; }
 
 safe_step() {
   local label="$1"; shift
@@ -109,25 +101,11 @@ safe_step() {
 ############################################
 # TELEPÍTŐK
 ############################################
-install_apache() {
-  apt_install apache2 && run systemctl enable --now apache2
-}
-
-install_ssh() {
-  apt_install openssh-server && run systemctl enable --now ssh
-}
-
-install_mosquitto() {
-  apt_install mosquitto mosquitto-clients && run systemctl enable --now mosquitto
-}
-
-install_mariadb() {
-  apt_install mariadb-server && run systemctl enable --now mariadb
-}
-
-install_php() {
-  apt_install php libapache2-mod-php php-mysql && run systemctl restart apache2
-}
+install_apache()   { apt_install apache2 && run systemctl enable --now apache2; }
+install_ssh()      { apt_install openssh-server && run systemctl enable --now ssh; }
+install_mosquitto(){ apt_install mosquitto mosquitto-clients && run systemctl enable --now mosquitto; }
+install_mariadb()  { apt_install mariadb-server && run systemctl enable --now mariadb; }
+install_php()      { apt_install php libapache2-mod-php php-mysql && run systemctl restart apache2; }
 
 install_ufw() {
   apt_install ufw || return 1
@@ -169,25 +147,37 @@ install_node_red() {
 }
 
 ############################################
-# FUN ANIMÁCIÓ 🎉
+# BATMAN VILLOGÁS + YOUTUBE ZENE
 ############################################
 celebrate() {
-  local msg="MEGVAN A 3-MAS? XD"
   local colors=("$RED" "$GREEN" "$YELLOW" "$BLUE" "$MAGENTA" "$CYAN")
+  local YT_URL="https://www.youtube.com/watch?v=iAzagp0PXSk"
 
-  for i in {1..7}; do
+  # Ellenőrzés: yt-dlp és mpv telepítve
+  if ! command -v yt-dlp >/dev/null 2>&1 || ! command -v mpv >/dev/null 2>&1; then
+    warn "YT lejátszáshoz telepítsd a yt-dlp és mpv csomagot!"
+    return
+  fi
+
+  # Hang lejátszása háttérben folyamatosan
+  (while true; do
+     yt-dlp -o - "$YT_URL" | mpv - >/dev/null 2>&1
+   done) &
+
+  # Villogó Batman ASCII
+  while true; do
     clear
     color=${colors[$RANDOM % ${#colors[@]}]}
-    echo -e "\n\n\n"
-    echo -e " ${color}██████╗  █████╗ ████████╗███╗   ███╗ █████╗ ███╗   ██╗${NC}"
-echo -e "     ${color}██╔══██╗██╔══██╗╚══██╔══╝████╗ ████║██╔══██╗████╗  ██║${NC}"
-echo -e "     ${color}██████╔╝███████║   ██║   ██╔████╔██║███████║██╔██╗ ██║${NC}"
-echo -e "     ${color}██╔══██╗██╔══██║   ██║   ██║╚██╔╝██║██╔══██║██║╚██╗██║${NC}"
-echo -e "     ${color}██████╔╝██║  ██║   ██║   ██║ ╚═╝ ██║██║  ██║██║ ╚████║${NC}"
-echo -e "     ${color}╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝${NC}"
+    echo -e "\n\n"
+    echo -e "   ${color}██████╗  █████╗ ████████╗███╗   ███╗ █████╗ ███╗   ██╗${NC}"
+    echo -e "   ${color}██╔══██╗██╔══██╗╚══██╔══╝████╗ ████║██╔══██╗████╗  ██║${NC}"
+    echo -e "   ${color}██████╔╝███████║   ██║   ██╔████╔██║███████║██╔██╗ ██║${NC}"
+    echo -e "   ${color}██╔══██╗██╔══██║   ██║   ██║╚██╔╝██║██╔══██║██║╚██╗██║${NC}"
+    echo -e "   ${color}██████╔╝██║  ██║   ██║   ██║ ╚═╝ ██║██║  ██║██║ ╚████║${NC}"
+    echo -e "   ${color}╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝${NC}"
     echo
-    echo -e "           ${color}${msg}${NC}"
-    sleep 0.35
+    echo -e "        ${color}MEGVAN A 3-MAS? XD${NC}"
+    sleep 0.4
   done
 }
 
