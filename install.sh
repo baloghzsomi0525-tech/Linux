@@ -1,148 +1,240 @@
 #!/bin/bash
-# SHOW-OFF INSTALLER ARCADE EDITION
-# ONE-KEY CONTROL | INSTALL | REMOVE | STATUS | BATMAN
+# Show-Off Server Installer - FINAL + NODE-RED + BATMAN ANIM + YT MUSIC
+# Apache | SSH | Mosquitto | Node-RED | MariaDB | PHP | UFW
+# Debian / Ubuntu / VirtualBox
 
 set -u
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export DEBIAN_FRONTEND=noninteractive
+
+############################################
+# KONFIG
+############################################
+CONFIG_FILE="./config.conf"
+if [[ -f "$CONFIG_FILE" ]]; then
+  source "$CONFIG_FILE"
+else
+  echo "WARN: config.conf nem található, alapértelmezett értékekkel futok."
+fi
+
+: "${DRY_RUN:=false}"
+: "${INSTALL_APACHE:=true}"
+: "${INSTALL_SSH:=true}"
+: "${INSTALL_NODE_RED:=true}"
+: "${INSTALL_MOSQUITTO:=true}"
+: "${INSTALL_MARIADB:=true}"
+: "${INSTALL_PHP:=true}"
+: "${INSTALL_UFW:=true}"
+: "${LOGFILE:=/var/log/showoff_installer.log}"
 
 ############################################
 # SZÍNEK
 ############################################
-RED="\e[31m"; GREEN="\e[32m"; YELLOW="\e[33m"
-BLUE="\e[34m"; MAGENTA="\e[35m"; CYAN="\e[36m"; NC="\e[0m"
+RED="\e[31m"
+GREEN="\e[32m"
+YELLOW="\e[33m"
+BLUE="\e[34m"
+MAGENTA="\e[35m"
+CYAN="\e[36m"
+NC="\e[0m"
 
 ############################################
 # ROOT CHECK
 ############################################
-[[ $EUID -ne 0 ]] && echo -e "${RED}Root kell!${NC}" && exit 1
-
-############################################
-# ÁLLAPOT
-############################################
-declare -A STATUS
-
-set_status() { STATUS["$1"]="$2"; }
-
-############################################
-# SEGÉD
-############################################
-is_pkg() { dpkg -s "$1" >/dev/null 2>&1; }
-
-key_menu() {
-  local name="$1" state="$2"
-  clear
-  echo -e "${CYAN}=== $name ===${NC}"
-  echo -e "Állapot: ${YELLOW}$state${NC}"
-  echo
-  echo -e "[i] Telepítés"
-  echo -e "[d] Törlés"
-  echo -e "[s] Kihagyás"
-  echo -e "[q] Kilépés"
-  echo
-  read -rsn1 key
-  echo "$key"
-}
-
-############################################
-# TELEPÍT / TÖRÖL FUNKCIÓK
-############################################
-install_apache()    { apt install -y apache2 && systemctl enable --now apache2; }
-remove_apache()     { systemctl stop apache2 2>/dev/null; apt purge -y apache2; }
-
-install_ssh()       { apt install -y openssh-server && systemctl enable --now ssh; }
-remove_ssh()        { systemctl stop ssh 2>/dev/null; apt purge -y openssh-server; }
-
-install_mosquitto() { apt install -y mosquitto mosquitto-clients && systemctl enable --now mosquitto; }
-remove_mosquitto()  { systemctl stop mosquitto 2>/dev/null; apt purge -y mosquitto mosquitto-clients; }
-
-install_node_red() {
-  curl -fsSL https://github.com/node-red/linux-installers/releases/latest/download/update-nodejs-and-nodered-deb \
-    | bash -s -- --confirm-root --confirm-install --skip-pi
-}
-remove_node_red() {
-  systemctl stop node-red@nodered 2>/dev/null
-  apt purge -y nodejs nodered
-  userdel -r nodered 2>/dev/null
-}
-
-install_mariadb()   { apt install -y mariadb-server && systemctl enable --now mariadb; }
-remove_mariadb()    { systemctl stop mariadb 2>/dev/null; apt purge -y mariadb-server; }
-
-install_php()       { apt install -y php libapache2-mod-php php-mysql; }
-remove_php()        { apt purge -y php libapache2-mod-php php-mysql; }
-
-install_ufw() {
-  apt install -y ufw
-  ufw allow OpenSSH
-  ufw allow 80/tcp
-  ufw allow 1880/tcp
-  ufw allow 1883/tcp
-  ufw --force enable
-}
-remove_ufw() {
-  ufw --force disable
-  apt purge -y ufw
-}
-
-############################################
-# GENERIKUS KEZELŐ
-############################################
-handle() {
-  local NAME="$1" PKG="$2" INSTALL="$3" REMOVE="$4"
-
-  local state="NINCS TELEPÍTVE"
-  is_pkg "$PKG" && state="TELEPÍTVE"
-
-  key=$(key_menu "$NAME" "$state")
-
-  case "$key" in
-    i) $INSTALL && set_status "$NAME" "TELEPÍTVE" ;;
-    d) $REMOVE  && set_status "$NAME" "TÖRÖLVE" ;;
-    s) set_status "$NAME" "$state" ;;
-    q) exit 0 ;;
-    *) set_status "$NAME" "$state" ;;
-  esac
-}
-
-############################################
-# START
-############################################
-apt update
-
-handle "Apache2"   "apache2"        install_apache   remove_apache
-handle "SSH"       "openssh-server" install_ssh      remove_ssh
-handle "Mosquitto" "mosquitto"      install_mosquitto remove_mosquitto
-handle "Node-RED"  "nodejs"          install_node_red remove_node_red
-handle "MariaDB"   "mariadb-server" install_mariadb  remove_mariadb
-handle "PHP"       "php"             install_php      remove_php
-handle "UFW"       "ufw"             install_ufw      remove_ufw
-
-############################################
-# ZENE – SMOOTH
-############################################
-if command -v yt-dlp >/dev/null && command -v mpv >/dev/null; then
-  yt-dlp -f bestaudio -o - "https://www.youtube.com/watch?v=iAzagp0PXSk" \
-    | mpv --no-video --really-quiet - &
+if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
+  echo -e "${RED}Root jogosultság szükséges.${NC}"
+  exit 1
 fi
 
 ############################################
-# BATMAN + STATUS
+# LOG
 ############################################
-COLORS=($RED $GREEN $YELLOW $BLUE $MAGENTA $CYAN)
+mkdir -p "$(dirname "$LOGFILE")" 2>/dev/null || true
+touch "$LOGFILE" 2>/dev/null || true
 
-while true; do
-  clear
-  C=${COLORS[$RANDOM % ${#COLORS[@]}]}
-   echo -e "   ${color}██████╗  █████╗ ████████╗███╗   ███╗ █████╗ ███╗   ██╗${NC}"
-    echo -e "  ${color}██╔══██╗██╔══██╗╚══██╔══╝████╗ ████║██╔══██╗████╗  ██║${NC}"
-    echo -e "  ${color}██████╔╝███████║   ██║   ██╔████╔██║███████║██╔██╗ ██║${NC}"
-    echo -e "  ${color}██╔══██╗██╔══██║   ██║   ██║╚██╔╝██║██╔══██║██║╚██╗██║${NC}"
-    echo -e "  ${color}██████╔╝██║  ██║   ██║   ██║ ╚═╝ ██║██║  ██║██║ ╚████║${NC}"
-    echo -e "  ${color}╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝${NC}"
+log() { echo "$(date '+%F %T') | $1" | tee -a "$LOGFILE" >/dev/null; }
+ok()   { echo -e "${GREEN}✔ $1${NC}"; log "OK: $1"; }
+warn() { echo -e "${YELLOW}⚠ $1${NC}"; log "WARN: $1"; }
+fail() { echo -e "${RED}✖ $1${NC}"; log "FAIL: $1"; }
 
-  echo
-  for s in Apache2 SSH Mosquitto Node-RED MariaDB PHP UFW; do
-    echo -e " ${CYAN}$s${NC} : ${GREEN}${STATUS[$s]:-ISMERETLEN}${NC}"
+run() {
+  [[ "$DRY_RUN" == "true" ]] && { warn "[DRY-RUN] $*"; return 0; }
+  "$@"
+}
+
+############################################
+# BANNER
+############################################
+clear
+cat << "EOF"
+=========================================
+ SHOW-OFF SERVER INSTALLER
+ Apache | Node-RED | MQTT | MariaDB | PHP
+=========================================
+EOF
+echo -e "${BLUE}Logfile:${NC} $LOGFILE"
+echo
+
+############################################
+# EREDMÉNYEK
+############################################
+declare -A RESULTS
+set_result() { RESULTS["$1"]="$2"; }
+
+############################################
+# APT
+############################################
+apt_update() { run apt-get update -y; }
+apt_install() { run apt-get install -y "$@"; }
+
+safe_step() {
+  local label="$1"; shift
+  if "$@"; then
+    set_result "$label" "SIKERES"
+    return 0
+  else
+    set_result "$label" "HIBA"
+    return 1
+  fi
+}
+
+############################################
+# TELEPÍTŐK
+############################################
+install_apache()   { apt_install apache2 && run systemctl enable --now apache2; }
+install_ssh()      { apt_install openssh-server && run systemctl enable --now ssh; }
+install_mosquitto(){ apt_install mosquitto mosquitto-clients && run systemctl enable --now mosquitto; }
+install_mariadb()  { apt_install mariadb-server && run systemctl enable --now mariadb; }
+install_php()      { apt_install php libapache2-mod-php php-mysql && run systemctl restart apache2; }
+
+install_ufw() {
+  apt_install ufw || return 1
+  run ufw allow OpenSSH || true
+  run ufw allow 80/tcp || true
+  run ufw allow 1880/tcp || true
+  run ufw allow 1883/tcp || true
+  run ufw --force enable
+}
+
+############################################
+# NODE-RED – FIX
+############################################
+install_node_red() {
+  apt_install curl ca-certificates build-essential || return 1
+
+  set +e
+  curl -fsSL https://github.com/node-red/linux-installers/releases/latest/download/update-nodejs-and-nodered-deb \
+    | bash -s -- --confirm-root --confirm-install --skip-pi
+  set -e
+
+  id nodered >/dev/null 2>&1 || useradd -m -s /bin/bash nodered
+
+  run systemctl daemon-reexec || true
+  run systemctl daemon-reload || true
+
+  if systemctl list-unit-files | grep -q '^node-red@\.service'; then
+    run systemctl enable --now node-red@nodered.service
+    return 0
+  fi
+
+  if command -v node-red >/dev/null 2>&1; then
+    su - nodered -c "nohup node-red >/home/nodered/node-red.log 2>&1 &"
+    sleep 3
+    pgrep -f node-red >/dev/null && return 0
+  fi
+
+  return 1
+}
+
+############################################
+# TELEPÍTÉS YT-DLP ÉS MPV
+############################################
+install_yt_deps() {
+  # mpv telepítése
+  if ! command -v mpv >/dev/null 2>&1; then
+    log "MPV nincs telepítve, telepítés..."
+    apt_install mpv
+  fi
+
+  # python3-pip telepítése
+  if ! command -v python3 >/dev/null 2>&1 || ! command -v pip3 >/dev/null 2>&1; then
+    log "Python3-pip telepítése..."
+    apt_install python3 python3-pip
+  fi
+
+  # yt-dlp telepítése pip3-ból
+  if ! command -v yt-dlp >/dev/null 2>&1; then
+    log "yt-dlp telepítése pip3-ból..."
+    pip3 install yt-dlp
+  fi
+}
+
+############################################
+# BATMAN VILLOGÁS + YOUTUBE ZENE
+############################################
+celebrate() {
+  local colors=("$RED" "$GREEN" "$YELLOW" "$BLUE" "$MAGENTA" "$CYAN")
+  local YT_URL="https://www.youtube.com/watch?v=iAzagp0PXSk"
+
+  # Hang lejátszása háttérben folyamatosan
+  if command -v yt-dlp >/dev/null 2>&1 && command -v mpv >/dev/null 2>&1; then
+    (while true; do
+       yt-dlp -o - "$YT_URL" | mpv - >/dev/null 2>&1
+     done) &
+  else
+    warn "YT lejátszáshoz telepítsd a yt-dlp és mpv csomagot!"
+  fi
+
+  # Villogó Batman ASCII
+  while true; do
+    clear
+    color=${colors[$RANDOM % ${#colors[@]}]}
+    echo -e "\n\n"
+    echo -e "   ${color}██████╗  █████╗ ████████╗███╗   ███╗ █████╗ ███╗   ██╗${NC}"
+    echo -e "   ${color}██╔══██╗██╔══██╗╚══██╔══╝████╗ ████║██╔══██╗████╗  ██║${NC}"
+    echo -e "   ${color}██████╔╝███████║   ██║   ██╔████╔██║███████║██╔██╗ ██║${NC}"
+    echo -e "   ${color}██╔══██╗██╔══██║   ██║   ██║╚██╔╝██║██╔══██║██║╚██╗██║${NC}"
+    echo -e "   ${color}██████╔╝██║  ██║   ██║   ██║ ╚═╝ ██║██║  ██║██║ ╚████║${NC}"
+    echo -e "   ${color}╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝${NC}"
+    echo
+    echo -e "        ${color}MEGVAN A 4-ES? XD${NC}"
+    sleep 0.4
   done
-  sleep 0.5
-done
+}
+
+############################################
+# FUTTATÁS
+############################################
+apt_update || warn "APT update hiba"
+
+run_install() {
+  local var="$1" label="$2" func="$3"
+  echo -e "${BLUE}==> $label${NC}"
+  if [[ "${!var}" == "true" ]]; then
+    safe_step "$label" "$func" && ok "$label OK" || fail "$label HIBA"
+  else
+    warn "$label kihagyva"
+    set_result "$label" "KIHAGYVA"
+  fi
+  echo
+}
+
+# Telepítés
+run_install INSTALL_APACHE     "Apache2"   install_apache
+run_install INSTALL_SSH        "SSH"       install_ssh
+run_install INSTALL_MOSQUITTO  "Mosquitto" install_mosquitto
+run_install INSTALL_NODE_RED   "Node-RED"  install_node_red
+run_install INSTALL_MARIADB    "MariaDB"   install_mariadb
+run_install INSTALL_PHP        "PHP"       install_php
+run_install INSTALL_UFW        "UFW"       install_ufw
+
+# Telepítés YT deps
+install_yt_deps
+
+############################################
+# VÉGE 🎬
+############################################
+echo -e "${GREEN}KÉSZ – telepítés befejezve.${NC}"
+sleep 1
+celebrate
+exit 0
