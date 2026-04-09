@@ -119,4 +119,78 @@ do
         echo "Jelszó: 8O(#\`="
         echo ""
     fi
+    # =========================
+# MAPPÁK LÉTREHOZÁSA
+# =========================
+mkdir -p "$BASE"
+cd "$BASE"
+
+mkdir -p Logs Backup Temp Secrets Data
+mkdir -p Discord/szerverek
+
+cd Discord/szerverek
+
+servers=(
+alpha beta gamma delta epsilon zeta theta omega nexus titan
+matrix cyber void shadow neon quantum vortex pixel arcadia
+szarfos
+)
+
+for s in "${servers[@]}"
+do
+    mkdir -p "$s"
+done
+
+# =========================
+# AUTOMATIKUS BELÉPÉS + NÉZET
+# =========================
+cd "$BASE"
+
+clear
+echo "📂 RENDSZER ELÉRÉS MEGADVA"
+echo "========================================="
+echo ""
+
+# Fa struktúra kiírás (ha van tree)
+if command -v tree &> /dev/null
+then
+    tree
+else
+    echo "Struktúra:"
+    echo "escape_room/"
+    echo "├── Logs"
+    echo "├── Backup"
+    echo "├── Temp"
+    echo "├── Secrets"
+    echo "├── Data"
+    echo "└── Discord/"
+    echo "    └── szerverek/"
+    ls Discord/szerverek
+fi
+
+echo ""
+echo "========================================="
+echo "💡 TIPP: cd, ls, rm -r"
+echo "🎯 Feladat: töröld a hibás szervert"
+echo ""
+
+# =========================
+# INTERAKTÍV SHELL INDÍTÁSA
+# =========================
+cd "$BASE"
+bash &
+SHELL_PID=$!
+
+# =========================
+# FIGYELÉS A TÖRLÉSRE
+# =========================
+TARGET="$BASE/Discord/szerverek/szarfos"
+
+while true
+do
+    if [ ! -d "$TARGET" ]; then
+        kill $SHELL_PID 2>/dev/null
+        break
+    fi
+    sleep 1
 done
