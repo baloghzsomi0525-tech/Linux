@@ -17,7 +17,7 @@ echo ""
 echo "-----------------------------------------"
 
 # =========================
-# LOGIN RÉSZ
+# LOGIN
 # =========================
 while true
 do
@@ -47,7 +47,7 @@ echo "Belépve a rendszerbe..."
 sleep 2
 
 # =========================
-# MAPPÁK LÉTREHOZÁSA
+# MAPPÁK
 # =========================
 rm -rf "$BASE" 2>/dev/null
 mkdir -p "$BASE"
@@ -70,7 +70,7 @@ do
 done
 
 # =========================
-# VIZUÁLIS NÉZET
+# NÉZET
 # =========================
 cd "$BASE"
 
@@ -96,16 +96,16 @@ fi
 
 echo ""
 echo "========================================="
-echo "💡 TIPP: cd, ls, rmdir, -r"
+echo "💡 TIPP: cd, ls, rm -r"
 echo "🎯 Feladat: töröld a hibás szervert"
 echo ""
 
 # =========================
-# FIGYELÉS HÁTTÉRBEN
+# WATCHER (EGYSZER FUT LE!)
 # =========================
+(
 TARGET="$BASE/Discord/szerverek/szarfos"
 
-(
 while true
 do
     if [ ! -d "$TARGET" ]; then
@@ -121,31 +121,35 @@ do
         echo "⏳ VISSZASZÁMLÁLÁS ELINDULT (10:00)"
         echo ""
 
-        seconds=5
+        seconds=600
 
         while [ $seconds -gt 0 ]
         do
             min=$((seconds / 60))
             sec=$((seconds % 60))
-
             printf "\r⏳ Hátralévő idő: %02d:%02d " $min $sec
-
             sleep 1
             ((seconds--))
         done
 
         echo ""
         echo ""
-        echo "❌ IDŐ LEJÁRT - RENDSZER ZÁROLVA"
+        echo "🚓 ELKAPTAK A RENDŐRÖK!"
+        echo "❌ VESZTETTÉL"
+        echo ""
+        echo "Kilépés 10 másodperc múlva..."
 
-        kill -9 $$
+        sleep 10
+
+        pkill -P $$ 2>/dev/null
+        exit
     fi
     sleep 1
 done
 ) &
 
 # =========================
-# INTERAKTÍV SHELL (EZ A LÉNYEG)
+# INTERAKTÍV SHELL
 # =========================
 cd "$BASE"
 export PS1="(DISCORD-SERVER) $ "
