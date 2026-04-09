@@ -96,7 +96,7 @@ fi
 
 echo ""
 echo "========================================="
-echo "💡 TIPP: cd, ls, rm -r"
+echo "💡 TIPP: cd, ls, rmdir, -r"
 echo "🎯 Feladat: töröld a hibás szervert"
 echo ""
 
@@ -121,7 +121,7 @@ do
         echo "⏳ VISSZASZÁMLÁLÁS ELINDULT (10:00)"
         echo ""
 
-        seconds=5
+        seconds=600
 
         while [ $seconds -gt 0 ]
         do
@@ -137,9 +137,7 @@ do
         echo "🚓 ELKAPTAK A RENDŐRÖK!"
         echo "❌ VESZTETTÉL"
         echo ""
-        echo "Kilépés 10 másodperc múlva..."
-
-        sleep 10
+        
 
         pkill -P $$ 2>/dev/null
         exit
