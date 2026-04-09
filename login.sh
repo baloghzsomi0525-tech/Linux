@@ -121,7 +121,7 @@ do
         echo "⏳ VISSZASZÁMLÁLÁS ELINDULT (10:00)"
         echo ""
 
-        seconds=600
+        seconds=5
 
         while [ $seconds -gt 0 ]
         do
