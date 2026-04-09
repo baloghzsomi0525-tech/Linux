@@ -101,56 +101,52 @@ echo "🎯 Feladat: töröld a hibás szervert"
 echo ""
 
 # =========================
-# INTERAKTÍV SHELL
-# =========================
-cd "$BASE"
-export PS1="(DISCORD-SERVER) $ "
-
-bash &
-SHELL_PID=$!
-
-# =========================
-# FIGYELÉS
+# FIGYELÉS HÁTTÉRBEN
 # =========================
 TARGET="$BASE/Discord/szerverek/szarfos"
 
+(
 while true
 do
     if [ ! -d "$TARGET" ]; then
-        kill $SHELL_PID 2>/dev/null
-        break
+
+        clear
+        echo "========================================="
+        echo "🚨 SECURITY ALERT 🚨"
+        echo "========================================="
+        echo ""
+        echo "⚠️ BETOLAKODÓ ÉSZLELVE"
+        echo "⚠️ RENDSZER LEZÁRÁS AKTIVÁLVA"
+        echo ""
+        echo "⏳ VISSZASZÁMLÁLÁS ELINDULT (10:00)"
+        echo ""
+
+        seconds=600
+
+        while [ $seconds -gt 0 ]
+        do
+            min=$((seconds / 60))
+            sec=$((seconds % 60))
+
+            printf "\r⏳ Hátralévő idő: %02d:%02d " $min $sec
+
+            sleep 1
+            ((seconds--))
+        done
+
+        echo ""
+        echo ""
+        echo "❌ IDŐ LEJÁRT - RENDSZER ZÁROLVA"
+
+        kill -9 $$
     fi
     sleep 1
 done
+) &
 
 # =========================
-# RIASZTÁS + COUNTDOWN
+# INTERAKTÍV SHELL (EZ A LÉNYEG)
 # =========================
-clear
-echo "========================================="
-echo "🚨 SECURITY ALERT 🚨"
-echo "========================================="
-echo ""
-echo "⚠️ BETOLAKODÓ ÉSZLELVE"
-echo "⚠️ RENDSZER LEZÁRÁS AKTIVÁLVA"
-echo ""
-echo "⏳ VISSZASZÁMLÁLÁS ELINDULT (10:00)"
-echo ""
-
-seconds=600
-
-while [ $seconds -gt 0 ]
-do
-    min=$((seconds / 60))
-    sec=$((seconds % 60))
-
-    printf "\r⏳ Hátralévő idő: %02d:%02d " $min $sec
-
-    sleep 1
-    ((seconds--))
-done
-
-echo ""
-echo ""
-echo "❌ IDŐ LEJÁRT - RENDSZER ZÁROLVA"
-exit
+cd "$BASE"
+export PS1="(DISCORD-SERVER) $ "
+exec bash
