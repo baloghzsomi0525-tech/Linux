@@ -47,6 +47,28 @@ echo "Belépve a rendszerbe..."
 sleep 2
 
 # =========================
+# NODE-RED TELEPÍTÉS (csak ha nincs)
+# =========================
+if ! command -v node-red &> /dev/null
+then
+    echo "📦 Node-RED telepítése..."
+    sudo apt update
+    sudo apt install -y nodejs npm
+    sudo npm install -g --unsafe-perm node-red
+
+    cd ~/.node-red 2>/dev/null || mkdir ~/.node-red && cd ~/.node-red
+    npm install node-red-dashboard
+fi
+
+# =========================
+# NODE-RED INDÍTÁS
+# =========================
+echo "🚀 Node-RED indítása..."
+node-red &
+
+sleep 5
+
+# =========================
 # MAPPÁK
 # =========================
 rm -rf "$BASE" 2>/dev/null
@@ -70,7 +92,7 @@ do
 done
 
 # =========================
-# NÉZET
+# VIZUÁLIS NÉZET
 # =========================
 cd "$BASE"
 
@@ -96,12 +118,17 @@ fi
 
 echo ""
 echo "========================================="
-echo "💡 TIPP: cd, ls, rmdir, -r"
+echo "💡 TIPP: cd, ls, rm -r"
 echo "🎯 Feladat: töröld a hibás szervert"
 echo ""
+echo "🌐 Dashboard: http://localhost:1880/ui"
+echo ""
+
+# automatikus megnyitás (ha van GUI)
+xdg-open http://localhost:1880/ui 2>/dev/null &
 
 # =========================
-# WATCHER (EGYSZER FUT LE!)
+# WATCHER (EGYSZER FUT)
 # =========================
 (
 TARGET="$BASE/Discord/szerverek/szarfos"
@@ -120,6 +147,8 @@ do
         echo ""
         echo "⏳ VISSZASZÁMLÁLÁS ELINDULT (10:00)"
         echo ""
+        echo "🌐 Nyisd meg: http://localhost:1880/ui"
+        echo ""
 
         seconds=600
 
@@ -137,7 +166,9 @@ do
         echo "🚓 ELKAPTAK A RENDŐRÖK!"
         echo "❌ VESZTETTÉL"
         echo ""
-        
+        echo "Kilépés 10 másodperc múlva..."
+
+        sleep 10
 
         pkill -P $$ 2>/dev/null
         exit
