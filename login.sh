@@ -2,29 +2,39 @@
  
 BASE="$HOME/escape_room"
  
+# SZÍNEK
+
+RED='\033[0;31m'
+
+GREEN='\033[0;32m'
+
+YELLOW='\033[1;33m'
+
+BLUE='\033[0;34m'
+
+NC='\033[0m'
+ 
 clear
  
-echo "========================================="
+echo -e "${BLUE}=========================================${NC}"
 
-echo "        DISCORD ADMIN TERMINAL"
+echo -e "${GREEN}        DISCORD ADMIN TERMINAL${NC}"
 
-echo "========================================="
-
-echo ""
-
-echo "⚠️ Rendszergazda hitelesítés szükséges"
+echo -e "${BLUE}=========================================${NC}"
 
 echo ""
 
-echo "Titkos információ:"
+echo -e "${RED}⚠️ Rendszergazda hitelesítés szükséges${NC}"
+
+echo ""
+
+echo -e "${YELLOW}Titkos információ:${NC}"
 
 echo "Felhasználónév: +>@1M7"
 
 echo "Jelszó: 8O(#\`="
 
 echo ""
-
-echo "-----------------------------------------"
  
 # LOGIN
 
@@ -40,7 +50,7 @@ do
  
     if [[ "$user" == "Balint" && "$pass" == "Bolyai" ]]; then
 
-        echo "✅ Hozzáférés megadva"
+        echo -e "${GREEN}✅ Hozzáférés megadva${NC}"
 
         sleep 2
 
@@ -48,7 +58,7 @@ do
 
     else
 
-        echo "❌ Hibás adatok!"
+        echo -e "${RED}❌ Hibás adatok!${NC}"
 
         sleep 2
 
@@ -60,7 +70,7 @@ done
  
 clear
 
-echo "Belépve a rendszerbe..."
+echo -e "${GREEN}Belépve a rendszerbe...${NC}"
 
 sleep 2
  
@@ -98,43 +108,31 @@ mkdir -p Logs Backup Temp Secrets Data Config
 
 mkdir -p Discord/szerverek
  
-# =========================
-
 # CLUE-K
 
-# =========================
- 
-echo "WARNING: Server unstable below 15°C" > Logs/system.log
+echo "WARNING: Server unstable below 30°C" > Logs/system.log
 
+echo "Temperature critical threshold: 30" > Logs/temp_hint.txt
+ 
 echo "Backup rotation sequence: 6 -> 15 -> 8" > Secrets/backup.txt
 
+echo "Sequence hint: first low then high then medium" > Secrets/hint2.txt
+ 
 echo "Power sequence: ON OFF ON" > Config/power.conf
 
-echo "Hold button for 5 seconds to confirm override" > Data/button.txt
- 
-# +4 EXTRA CLUE
-
-echo "Temperature critical threshold: 15" > Logs/temp_hint.txt
-
-echo "Sequence hint: first low then high then medium" > Secrets/hint2.txt
-
 echo "Binary pattern: 101" > Config/binary.txt
+ 
+echo "Hold button for 5 seconds to confirm override" > Data/button.txt
 
 echo "Authentication requires patience..." > Data/hint_btn.txt
+ 
+echo "Override code: 7429" > Backup/code.txt
  
 # SZERVEREK
 
 cd Discord/szerverek
- 
-servers=(
 
-alpha beta gamma delta epsilon zeta theta omega nexus titan
-
-matrix cyber void shadow neon quantum vortex pixel arcadia
-
-szarfos
-
-)
+servers=(alpha beta gamma delta epsilon zeta theta omega nexus titan matrix cyber void shadow neon quantum vortex pixel arcadia szarfos)
  
 for s in "${servers[@]}"
 
@@ -144,47 +142,27 @@ do
 
 done
  
-# =========================
-
-# VIZUÁLIS FA
-
-# =========================
+# VIZUÁLIS
 
 cd "$BASE"
  
 clear
 
-echo "📂 RENDSZER ELÉRÉS MEGADVA"
+echo -e "${GREEN}📂 RENDSZER ELÉRÉS MEGADVA${NC}"
 
 echo "========================================="
-
-echo ""
  
 echo "escape_room/"
 
 echo "├── Logs/"
 
-echo "│   ├── system.log"
-
-echo "│   └── temp_hint.txt"
-
 echo "├── Secrets/"
-
-echo "│   ├── backup.txt"
-
-echo "│   └── hint2.txt"
 
 echo "├── Data/"
 
-echo "│   ├── button.txt"
-
-echo "│   └── hint_btn.txt"
-
 echo "├── Config/"
 
-echo "│   ├── power.conf"
-
-echo "│   └── binary.txt"
+echo "├── Backup/"
 
 echo "└── Discord/"
 
@@ -194,28 +172,84 @@ ls Discord/szerverek
  
 echo ""
 
-echo "========================================="
-
-echo "💡 TIPP: Az ajtó bezáródott… találd meg a kijutás módját!"
+echo -e "${YELLOW}💡 TIPP: Az ajtó bezáródott… találd meg a kijutás módját!${NC}"
 
 echo "📄 Hasznos parancsok: cat, ls, cd, rmdir"
 
-echo "🎯 Feladat: töröld a hibás szervert"
+echo -e "${RED}🎯 Feladat: töröld a hibás szervert${NC}"
 
 echo ""
 
-echo "🌐 Dashboard: http://localhost:1880/ui"
-
-echo ""
+echo -e "${BLUE}🌐 Dashboard: http://localhost:1880/ui${NC}"
  
 xdg-open http://localhost:1880/ui 2>/dev/null &
  
 # =========================
 
-# WATCHER
+# COUNTDOWN LOGIKA
 
 # =========================
+ 
+COUNTDOWN_ACTIVE=1
+ 
+countdown() {
 
+    seconds=300
+ 
+    echo ""
+
+    echo "========================================="
+
+    echo "⚠️ FURCSA TEVÉKENYSÉG ÉSZLELVE"
+
+    echo "🔒 AZ AJTÓ LEZÁRÁSI RENDSZERE AKTIVÁLVA"
+
+    echo "========================================="
+
+    echo ""
+
+    echo "⏳ VISSZASZÁMLÁLÁS ELINDULT (05:00)"
+
+    echo ""
+
+    echo "💻 Írd be: unlock_exit"
+
+    echo ""
+ 
+    while [ $seconds -gt 0 ] && [ $COUNTDOWN_ACTIVE -eq 1 ]
+
+    do
+
+        min=$((seconds / 60))
+
+        sec=$((seconds % 60))
+
+        printf "\r⏳ Hátralévő idő: %02d:%02d " $min $sec
+
+        sleep 1
+
+        ((seconds--))
+
+    done
+ 
+    if [ $COUNTDOWN_ACTIVE -eq 1 ]; then
+
+        echo ""
+
+        echo ""
+
+        echo "🚓 ELKAPTAK A RENDŐRÖK!"
+
+        echo "❌ VESZTETTÉL"
+
+        sleep 5
+
+        exit
+
+    fi
+
+}
+ 
 (
 
 TARGET="$BASE/Discord/szerverek/szarfos"
@@ -225,60 +259,10 @@ while true
 do
 
     if [ ! -d "$TARGET" ]; then
- 
-        clear
 
-        echo "========================================="
+        countdown &
 
-        echo "⚠️ FURCSA TEVÉKENYSÉG ÉSZLELVE"
-
-        echo "========================================="
-
-        echo ""
-
-        echo "🔒 AZ AJTÓ LEZÁRÁSI RENDSZERE AKTIVÁLVA"
-
-        echo ""
-
-        echo "⏳ VISSZASZÁMLÁLÁS ELINDULT (05:00)"
-
-        echo ""
-
-        echo "🌐 Nyisd meg: http://localhost:1880/ui"
-
-        echo ""
- 
-        seconds=300
- 
-        while [ $seconds -gt 0 ]
-
-        do
-
-            min=$((seconds / 60))
-
-            sec=$((seconds % 60))
-
-            printf "\r⏳ Hátralévő idő: %02d:%02d " $min $sec
-
-            sleep 1
-
-            ((seconds--))
-
-        done
- 
-        echo ""
-
-        echo ""
-
-        echo "🚓 ELKAPTAK A RENDŐRÖK!"
-
-        echo "❌ VESZTETTÉL"
-
-        sleep 10
-
-        pkill -P $$ 2>/dev/null
-
-        exit
+        break
 
     fi
 
@@ -288,11 +272,27 @@ done
 
 ) &
  
-# SHELL
-
 cd "$BASE"
 
 export PS1="(DISCORD-SERVER) $ "
+ 
+# FINAL COMMAND
 
+unlock_exit() {
+
+    COUNTDOWN_ACTIVE=0
+
+    echo ""
+
+    echo "========================================="
+
+    echo "🎉 SIKER! KIJUTOTTÁL"
+
+    echo "========================================="
+
+    exit
+
+}
+ 
 exec bash
  
